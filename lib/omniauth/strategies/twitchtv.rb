@@ -39,17 +39,19 @@ module OmniAuth
       end
 
       def raw_info
-        access_token.options[:header_format] = 'OAuth %s'
-        @raw_info ||= access_token.get(info_url).parsed
+        @raw_info ||= access_token.get(info_url, params: { oauth_token: access_token.token }).parsed
       end
 
+
       def info_url
-        unless self.options.scopes && (self.options.scopes.index("user_read") || self.options.scopes.index(:user_read)) ||
-            self.options.scopes && (self.options.scopes.index("user_read") || self.options.scopes.index(:user_read)) ||
-            self.options.scope.to_sym == :user_read || self.options.scope.to_sym == :channel_read
-          raise Omniauth::Twitchtv::TwitchtvError.new("Must include at least either the channel or user read scope in omniauth-twitchtv initializer")
+        if self.options.scope.present? && self.options.scope.index("user_read")
+          "https://api.twitch.tv/kraken/user"
+        else
+      # In case scope does not contain allowance to read user info,
+      # obtain it from kraken and read public profile
+          response = access_token.get("https://api.twitch.tv/kraken/", params: { oauth_token: access_token.token }).parsed
+          response['_links']['users']
         end
-        "https://api.twitch.tv/kraken/user"
       end
     end
   end
